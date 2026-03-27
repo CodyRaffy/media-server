@@ -1,0 +1,39 @@
+services:
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    network_mode: host
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TIMEZONE:-America/New_York}
+      - VERSION=docker
+    volumes:
+      - ./config/plex:/config
+      - ${MUSIC_PATH:-/mnt/music}:/music:ro
+    restart: unless-stopped
+    depends_on:
+      rclone-sync:
+        condition: service_started
+
+  rclone-sync:
+    image: rclone/rclone:latest
+    container_name: rclone-sync
+    environment:
+      - TZ=${TIMEZONE:-America/New_York}
+    volumes:
+      - ./config/rclone:/config/rclone
+      - ${MUSIC_PATH:-/mnt/music}:/music
+    entrypoint: /bin/sh
+    command: >
+      -c 'while true; do
+        echo "[$(date)] Starting Dropbox sync...";
+        rclone sync "${RCLONE_REMOTE:-dropbox}:${DROPBOX_MUSIC_PATH:-/Music}" /music
+          --verbose
+          --transfers 4
+          --checkers 8
+          --log-file /config/rclone/sync.log;
+        echo "[$(date)] Sync complete. Sleeping ${SYNC_INTERVAL:-21600} seconds...";
+        sleep ${SYNC_INTERVAL:-21600};
+      done'
+    restart: unless-stopped

@@ -1,0 +1,10 @@
+# Environment config (contains passwords)
+.env
+
+# Runtime data
+config/plex/
+config/rclone/
+
+# OS files
+.DS_Store
+Thumbs.db
